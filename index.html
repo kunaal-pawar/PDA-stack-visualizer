@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDA Stack Visualizer</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="container">
+    <h1>PDA Stack Visualizer</h1>
+    <div class="language-selection">
+      <label for="languageSelect">Select Language:</label>
+      <select id="languageSelect" onchange="changeLanguage()">
+        <option value="anbn">aⁿbⁿ (n ≥ 0)</option>
+        <option value="anb2n">aⁿb²ⁿ (n ≥ 0)</option>
+        <option value="parentheses">Balanced Parentheses</option>
+        <option value="palindrome">Palindrome (w wᴿ)</option>
+      </select>
+    </div>
+    <p class="subtitle" id="languageSubtitle">Pushdown Automaton for the language a<sup>n</sup>b<sup>n</sup></p>
+
+    <!-- INPUT SECTION -->
+    <section class="card" id="input-section">
+      <h2>Input</h2>
+      <div class="input-row">
+        <input type="text" id="inputString" placeholder="e.g. aaabbb" maxlength="20" />
+        <button class="btn primary" id="btnStart" onclick="startSimulation()">Start</button>
+        <button class="btn" id="btnNext" onclick="nextStep()" disabled>Next Step</button>
+        <button class="btn danger" onclick="reset()">Reset</button>
+      </div>
+      <div class="chips" id="chipsContainer">
+        <span class="label">Try:</span>
+        <button class="chip" onclick="setInput('aaabbb')">aaabbb</button>
+        <button class="chip" onclick="setInput('ab')">ab</button>
+        <button class="chip" onclick="setInput('aabbb')">aabbb</button>
+        <button class="chip" onclick="setInput('abb')">abb</button>
+      </div>
+    </section>
+
+    <!-- MAIN GRID -->
+    <div class="main-grid">
+
+      <!-- LEFT COL: STACK -->
+      <section class="card stack-card">
+        <h2>Stack</h2>
+        <div class="stack-wrap">
+          <div class="stack" id="stack"></div>
+          <div class="stack-bottom-label">bottom (Z)</div>
+        </div>
+      </section>
+
+      <!-- CENTER COL: TAPE & STATE -->
+      <div class="center-col">
+        <section class="card" id="tape-section" style="display:none">
+          <h2>Input Tape</h2>
+          <div class="tape-container">
+            <div class="tape" id="tape"></div>
+          </div>
+        </section>
+
+        <section class="card state-card">
+          <h2>Current State</h2>
+          <div class="state-badge-container">
+            <div class="state-badge" id="stateBadge">
+              <span class="dot"></span>
+              <span id="stateLabel">q0</span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- RIGHT COL: TRANSITION INFO -->
+      <section class="card trans-card">
+        <h2>Transition Info</h2>
+        <table class="info-table">
+          <tr><td>Language</td><td><span class="mono" id="iLang">—</span></td></tr>
+          <tr><td>Symbol read</td><td><span class="mono" id="iSym">—</span></td></tr>
+          <tr><td>Stack top</td><td><span class="mono" id="iTop">—</span></td></tr>
+          <tr><td>Operation</td><td><span class="mono op-badge" id="iOp">—</span></td></tr>
+          <tr><td>Next state</td><td><span class="mono" id="iNext">—</span></td></tr>
+          <tr><td>Rule</td><td><span class="mono" id="iRule">—</span></td></tr>
+        </table>
+      </section>
+
+    </div>
+
+    <!-- STATUS -->
+    <div class="status-bar" id="status">Enter a string and click Start</div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
