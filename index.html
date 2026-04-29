@@ -13,10 +13,16 @@
     <div class="language-selection">
       <label for="languageSelect">Select Language:</label>
       <select id="languageSelect" onchange="changeLanguage()">
-        <option value="anbn">aⁿbⁿ (n ≥ 0)</option>
-        <option value="anb2n">aⁿb²ⁿ (n ≥ 0)</option>
+        <option value="anbn">a&#x207f;b&#x207f; (n &ge; 0)</option>
+        <option value="anb2n">a&#x207f;b&#x00b2;&#x207f; (n &ge; 0)</option>
+        <option value="anbncmdm">a&#x207f;b&#x207f;c&#x1d4d;d&#x1d4d;</option>
+        <option value="anbman">a&#x207f;b&#x1d4d;a&#x207f;</option>
+        <option value="palindrome">Palindrome</option>
         <option value="parentheses">Balanced Parentheses</option>
-        <option value="palindrome">Palindrome (w wᴿ)</option>
+        <option value="anbm">a&#x207f; b&#x1d50; (n &gt; m)</option>
+        <option value="aibjck">a&#x2071; b&#x02b2; c&#x1d4f; (i + j = k)</option>
+        <option value="anbmcm">a&#x207f;b&#x1d50;c&#x1d50; (n,m &ge; 0)</option>
+        <option value="zeroone">0&#x207f;1&#x207f; (n &ge; 0)</option>
       </select>
     </div>
     <p class="subtitle" id="languageSubtitle">Pushdown Automaton for the language a<sup>n</sup>b<sup>n</sup></p>
@@ -47,7 +53,7 @@
         <h2>Stack</h2>
         <div class="stack-wrap">
           <div class="stack" id="stack"></div>
-          <div class="stack-bottom-label">bottom (Z)</div>
+          <div class="stack-bottom-label">bottom (Z₀)</div>
         </div>
       </section>
 

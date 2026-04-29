@@ -77,6 +77,12 @@ body {
   cursor: pointer;
 }
 
+.language-selection select sup {
+  vertical-align: super;
+  font-size: 0.7em;
+  line-height: 0;
+}
+
 h1 {
   font-size: 32px;
   font-weight: 800;

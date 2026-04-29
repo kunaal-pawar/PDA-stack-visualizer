@@ -7,149 +7,482 @@ let running  = false;
 let done     = false;
 let currentLanguage = 'anbn';
 
-const pdaConfigs = {
-  "anbn": {
-    name: "aⁿbⁿ (n ≥ 0)",
-    subtitle: "Pushdown Automaton for the language aⁿbⁿ",
-    initialState: "q0",
-    stackStart: "Z",
-    allowedSymbols: /^[ab]*$/,
-    examples: ['aaabbb', 'ab', 'aabbb', 'abb'],
+function createEqualCountConfig(first, second, name, subtitle, examples) {
+  return {
+    name,
+    subtitle,
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: new RegExp(`^[${first}${second}]*$`),
+    examples,
     transitions: function(symbol, state, stackTop) {
       if (state === 'q0') {
-        if (symbol === 'a') {
-          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AZ)' : 'δ(q0, a, A) → (q0, AA)';
-          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule: rule };
-        } else if (symbol === 'b') {
+        if (symbol === first) {
+          const rule = stackTop === 'Z'
+            ? `δ(q0, ${first}, Z) → (q0, AZ)`
+            : `δ(q0, ${first}, A) → (q0, AA)`;
+          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule };
+        }
+
+        if (symbol === second) {
           if (stackTop === 'A') {
-            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q0, b, A) → (q1, ε)' };
-          } else {
-            return { error: 'stack underflow — no a was pushed before first b' };
+            return { nextState: 'q1', operation: 'Pop', rule: `δ(q0, ${second}, A) → (q1, ε)` };
           }
+          return { error: `stack underflow — no ${first} was pushed before first ${second}` };
         }
       } else if (state === 'q1') {
-        if (symbol === 'b') {
+        if (symbol === second) {
           if (stackTop === 'A') {
-            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, b, A) → (q1, ε)' };
-          } else {
-            return { error: 'stack underflow — more b\'s than a\'s' };
+            return { nextState: 'q1', operation: 'Pop', rule: `δ(q1, ${second}, A) → (q1, ε)` };
           }
-        } else if (symbol === 'a') {
-          return { error: 'invalid symbol "a" in state q1 — a\'s must come before b\'s' };
+          return { error: `stack underflow — more ${second}'s than ${first}'s` };
+        }
+
+        if (symbol === first) {
+          return { error: `invalid symbol "${first}" in state q1 — ${first}'s must come before ${second}'s` };
         }
       }
+
       return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
     },
-    acceptanceCondition: function(stack, state, index, inputLength) {
+    acceptanceCondition: function(stack) {
       return stack.length === 1 && stack[0] === 'Z';
     }
-  },
+  };
+}
 
-  "anb2n": {
-    name: "aⁿb²ⁿ (n ≥ 0)",
-    subtitle: "Pushdown Automaton for the language aⁿb²ⁿ",
-    initialState: "q0",
-    stackStart: "Z",
-    allowedSymbols: /^[ab]*$/,
-    examples: ['aabbbb', 'abb', 'aaabbbbbb', 'abbb'],
-    transitions: function(symbol, state, stackTop) {
-      if (state === 'q0') {
-        if (symbol === 'a') {
-          // Push two A's for each 'a'
-          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AAZ)' : 'δ(q0, a, A) → (q0, AAA)';
-          return { nextState: 'q0', operation: 'Push', pushValue: ['A', 'A'], rule: rule };
-        } else if (symbol === 'b') {
-          if (stackTop === 'A') {
-            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q0, b, A) → (q1, ε)' };
-          } else {
-            return { error: 'stack underflow — no a was pushed before first b' };
-          }
-        }
-      } else if (state === 'q1') {
-        if (symbol === 'b') {
-          if (stackTop === 'A') {
-            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, b, A) → (q1, ε)' };
-          } else {
-            return { error: 'stack underflow — expected more A\'s on stack' };
-          }
-        } else if (symbol === 'a') {
-          return { error: 'invalid symbol "a" in state q1 — a\'s must come before b\'s' };
-        }
-      }
-      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
-    },
-    acceptanceCondition: function(stack, state, index, inputLength) {
-      return stack.length === 1 && stack[0] === 'Z';
-    }
-  },
-
-  "parentheses": {
-    name: "Balanced Parentheses",
-    subtitle: "Pushdown Automaton for Balanced Parentheses",
-    initialState: "q0",
-    stackStart: "Z",
-    allowedSymbols: /^[()]*$/,
-    examples: ['(())', '()()', '(()', '())'],
-    transitions: function(symbol, state, stackTop) {
-      if (symbol === '(') {
-        return { nextState: 'q0', operation: 'Push', pushValue: '(', rule: 'δ(q0, (, Z/() → (q0, (Z/((' };
-      } else if (symbol === ')') {
-        if (stackTop === '(') {
-          return { nextState: 'q0', operation: 'Pop', rule: 'δ(q0, ), () → (q0, ε)' };
-        } else {
-          return { error: 'stack underflow — closing parenthesis without matching open' };
-        }
-      }
-      return { error: `invalid symbol "${symbol}"` };
-    },
-    acceptanceCondition: function(stack, state, index, inputLength) {
-      return stack.length === 1 && stack[0] === 'Z';
-    }
-  },
-
-  "palindrome": {
-    name: "Palindrome (w wᴿ)",
-    subtitle: "Pushdown Automaton for Palindrome (even length w wᴿ)",
-    initialState: "q0",
-    stackStart: "Z",
-    allowedSymbols: /^[ab]*$/,
-    examples: ['abba', 'baab', 'aaaa', 'aba'],
+function createEvenPalindromeConfig(symbols, name, subtitle, examples) {
+  return {
+    name,
+    subtitle,
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: new RegExp(`^[${symbols}]*$`),
+    examples,
     transitions: function(symbol, state, stackTop, index, inputLength) {
       const mid = inputLength / 2;
-      
+
       if (state === 'q0') {
         if (index < mid) {
-          return { nextState: 'q0', operation: 'Push', pushValue: symbol, rule: `δ(q0, ${symbol}, X) → (q0, ${symbol}X)` };
-        } else {
-          // Switch to popping state at midpoint
-          if (symbol === stackTop) {
-            return { nextState: 'q1', operation: 'Pop', rule: `δ(q0, ${symbol}, ${symbol}) → (q1, ε)` };
-          } else {
-            return { error: `mismatch at index ${index}: expected ${stackTop}, got ${symbol}` };
-          }
+          return {
+            nextState: 'q0',
+            operation: 'Push',
+            pushValue: symbol,
+            rule: `δ(q0, ${symbol}, X) → (q0, ${symbol}X)`
+          };
         }
-      } else if (state === 'q1') {
+
+        if (symbol === stackTop) {
+          return { nextState: 'q1', operation: 'Pop', rule: `δ(q0, ${symbol}, ${symbol}) → (q1, ε)` };
+        }
+
+        return { error: `mismatch at index ${index}: expected ${stackTop}, got ${symbol}` };
+      }
+
+      if (state === 'q1') {
         if (symbol === stackTop) {
           return { nextState: 'q1', operation: 'Pop', rule: `δ(q1, ${symbol}, ${symbol}) → (q1, ε)` };
-        } else {
-          return { error: `mismatch at index ${index}: expected ${stackTop}, got ${symbol}` };
         }
+
+        return { error: `mismatch at index ${index}: expected ${stackTop}, got ${symbol}` };
       }
+
       return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
     },
     acceptanceCondition: function(stack, state, index, inputLength) {
       return stack.length === 1 && stack[0] === 'Z' && inputLength > 0 && inputLength % 2 === 0;
     }
+  };
+}
+
+const pdaConfigs = {
+  anbn: createEqualCountConfig(
+    'a',
+    'b',
+    'aⁿbⁿ (n ≥ 0)',
+    'Pushdown Automaton for the language aⁿbⁿ',
+    ['aaabbb', 'ab', 'aabbb', 'abb']
+  ),
+
+  anbmcm: {
+    name: 'aⁿbᵐcᵐ (n,m ≥ 0)',
+    subtitle: 'Pushdown Automaton for the language aⁿbᵐcᵐ',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: /^[abc]*$/,
+    examples: ['aaabbbccc', 'abcc', 'aaaccc', 'aabbbc'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          return { nextState: 'q0', operation: 'None', rule: 'δ(q0, a, X) → (q0, X)' };
+        }
+        if (symbol === 'b') {
+          return { nextState: 'q1', operation: 'Push', pushValue: 'B', rule: 'δ(q0, b, X) → (q1, BX)' };
+        }
+        if (symbol === 'c') {
+          return { error: 'c cannot appear before b' };
+        }
+      } else if (state === 'q1') {
+        if (symbol === 'b') {
+          return { nextState: 'q1', operation: 'Push', pushValue: 'B', rule: 'δ(q1, b, X) → (q1, BX)' };
+        }
+        if (symbol === 'c') {
+          if (stackTop === 'B') {
+            return { nextState: 'q2', operation: 'Pop', rule: 'δ(q1, c, B) → (q2, ε)' };
+          }
+          return { error: 'no b available to match c' };
+        }
+        if (symbol === 'a') {
+          return { error: 'a must come before b and c sections' };
+        }
+      } else if (state === 'q2') {
+        if (symbol === 'c') {
+          if (stackTop === 'B') {
+            return { nextState: 'q2', operation: 'Pop', rule: 'δ(q2, c, B) → (q2, ε)' };
+          }
+          return { error: 'more c\'s than b\'s' };
+        }
+        if (symbol === 'a' || symbol === 'b') {
+          return { error: 'only c\'s are allowed after first c' };
+        }
+      }
+
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack) {
+      return stack.length === 1 && stack[0] === 'Z';
+    }
+  },
+
+  zeroone: createEqualCountConfig(
+    '0',
+    '1',
+    '0ⁿ1ⁿ (n ≥ 0)',
+    'Pushdown Automaton for the language 0ⁿ1ⁿ',
+    ['000111', '01', '00111', '011']
+  ),
+
+  anb2n: {
+    name: 'aⁿb²ⁿ (n ≥ 0)',
+    subtitle: 'Pushdown Automaton for the language aⁿb²ⁿ',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: /^[ab]*$/,
+    examples: ['aabbbb', 'abb', 'aaabbbbbb', 'abbb'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AAZ)' : 'δ(q0, a, A) → (q0, AAA)';
+          return { nextState: 'q0', operation: 'Push', pushValue: ['A', 'A'], rule };
+        }
+
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q0, b, A) → (q1, ε)' };
+          }
+          return { error: 'stack underflow — no a was pushed before first b' };
+        }
+      } else if (state === 'q1') {
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, b, A) → (q1, ε)' };
+          }
+          return { error: 'stack underflow — expected more A\'s on stack' };
+        }
+
+        if (symbol === 'a') {
+          return { error: 'invalid symbol "a" in state q1 — a\'s must come before b\'s' };
+        }
+      }
+
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack) {
+      return stack.length === 1 && stack[0] === 'Z';
+    }
+  },
+
+  anbncmdm: {
+    name: 'aⁿbⁿcᵐdᵐ',
+    subtitle: 'Pushdown Automaton for the language aⁿbⁿcᵐdᵐ',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: /^[abcd]*$/,
+    examples: ['aabbccdd', 'abccdd', 'aaabbbcccddd', 'abbccdd'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AZ)' : 'δ(q0, a, A) → (q0, AA)';
+          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule };
+        }
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q0, b, A) → (q1, ε)' };
+          }
+          return { error: 'stack underflow — no a was pushed before first b' };
+        }
+        return { error: 'language requires a\'s before b\'s' };
+      }
+      if (state === 'q1') {
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, b, A) → (q1, ε)' };
+          }
+          return { error: 'stack underflow — more b\'s than a\'s' };
+        }
+        if (symbol === 'c') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, c, A) → (q1, ε)' };
+          }
+          if (stackTop === 'Z') {
+            return { nextState: 'q2', operation: 'Push', pushValue: 'C', rule: 'δ(q1, c, Z) → (q2, CZ)' };
+          }
+          return { error: 'invalid stack state for c transition' };
+        }
+        if (symbol === 'a') {
+          return { error: 'a\'s must come before b\'s' };
+        }
+        return { error: 'language requires b\'s before c\'s' };
+      }
+      if (state === 'q2') {
+        if (symbol === 'c') {
+          const rule = stackTop === 'Z' ? 'δ(q2, c, Z) → (q2, CZ)' : 'δ(q2, c, C) → (q2, CC)';
+          return { nextState: 'q2', operation: 'Push', pushValue: 'C', rule };
+        }
+        if (symbol === 'd') {
+          if (stackTop === 'C') {
+            return { nextState: 'q2', operation: 'Pop', rule: 'δ(q2, d, C) → (q2, ε)' };
+          }
+          if (stackTop === 'Z') {
+            return { nextState: 'q3', operation: 'None', rule: 'δ(q2, d, Z) → (q3, Z)' };
+          }
+          return { error: 'stack underflow — no c was pushed before first d' };
+        }
+        return { error: 'language requires c\'s before d\'s' };
+      }
+      if (state === 'q3') {
+        return { error: 'input should end after matching all d\'s' };
+      }
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack, state, index, inputLength) {
+      return (state === 'q3' || (state === 'q2' && index === inputLength)) && stack.length === 1 && stack[0] === 'Z';
+    }
+  },
+
+  anbman: {
+    name: 'aⁿbᵐaⁿ',
+    subtitle: 'Pushdown Automaton for the language aⁿbᵐaⁿ',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: false,
+    allowedSymbols: /^[ab]*$/,
+    examples: ['aabbaa', 'aba', 'aaabbbbaaa', 'abba'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AZ)' : 'δ(q0, a, A) → (q0, AA)';
+          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule };
+        }
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'None', rule: 'δ(q0, b, A) → (q1, A)' };
+          }
+          return { error: 'at least one a required before b' };
+        }
+        return { error: 'language requires a\'s first' };
+      }
+      if (state === 'q1') {
+        if (symbol === 'b') {
+          return { nextState: 'q1', operation: 'None', rule: 'δ(q1, b, X) → (q1, X)' };
+        }
+        if (symbol === 'a') {
+          if (stackTop === 'A') {
+            return { nextState: 'q2', operation: 'Pop', rule: 'δ(q1, a, A) → (q2, ε)' };
+          }
+          return { error: 'stack underflow — more a\'s than initial a\'s' };
+        }
+        return { error: 'only b\'s or a\'s allowed' };
+      }
+      if (state === 'q2') {
+        if (symbol === 'a') {
+          if (stackTop === 'A') {
+            return { nextState: 'q2', operation: 'Pop', rule: 'δ(q2, a, A) → (q2, ε)' };
+          }
+          if (stackTop === 'Z') {
+            return { nextState: 'q3', operation: 'None', rule: 'δ(q2, a, Z) → (q3, Z)' };
+          }
+          return { error: 'stack underflow — more a\'s than initial a\'s' };
+        }
+        if (symbol === 'b') {
+          return { error: 'b\'s must come before final a\'s' };
+        }
+        return { error: 'only a\'s allowed in final section' };
+      }
+      if (state === 'q3') {
+        return { error: 'input should end after matching a\'s' };
+      }
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack, state, index, inputLength) {
+      return (state === 'q3' || (state === 'q2' && index === inputLength)) && stack.length === 1 && stack[0] === 'Z';
+    }
+  },
+
+  palindrome: createEvenPalindromeConfig(
+    'ab',
+    'Palindrome',
+    'Pushdown Automaton for Palindrome (even length w wᴿ)',
+    ['abba', 'baab', 'aaaa', 'aba']
+  ),
+
+  parentheses: {
+    name: 'Balanced Parentheses',
+    subtitle: 'Pushdown Automaton for Balanced Parentheses',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: true,
+    allowedSymbols: /^[()[\]{}]*$/,
+    examples: ['([])', '{[()]}', '([)]', '(()'],
+    transitions: function(symbol, state, stackTop) {
+      if (symbol === '(' || symbol === '[' || symbol === '{') {
+        return {
+          nextState: 'q0',
+          operation: 'Push',
+          pushValue: symbol,
+          rule: `δ(q0, ${symbol}, X) → (q0, ${symbol}X)`
+        };
+      }
+
+      if (symbol === ')' || symbol === ']' || symbol === '}') {
+        const expected = symbol === ')' ? '(' : symbol === ']' ? '[' : '{';
+        if (stackTop === expected) {
+          return { nextState: 'q0', operation: 'Pop', rule: `δ(q0, ${symbol}, ${expected}) → (q0, ε)` };
+        }
+        return { error: `mismatch — expected closing for "${stackTop}" before "${symbol}"` };
+      }
+
+      return { error: `invalid symbol "${symbol}"` };
+    },
+    acceptanceCondition: function(stack) {
+      return stack.length === 1 && stack[0] === 'Z';
+    }
+  },
+
+  anbm: {
+    name: 'aⁿ bᵐ (n > m)',
+    subtitle: 'Pushdown Automaton for the language aⁿ bᵐ where n > m',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: false,
+    allowedSymbols: /^[ab]*$/,
+    examples: ['aaab', 'aabb', 'aaaab', 'aab'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          const rule = stackTop === 'Z' ? 'δ(q0, a, Z) → (q0, AZ)' : 'δ(q0, a, A) → (q0, AA)';
+          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule };
+        }
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q0, b, A) → (q1, ε)' };
+          }
+          return { error: 'more b\'s than available a\'s' };
+        }
+      } else if (state === 'q1') {
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'δ(q1, b, A) → (q1, ε)' };
+          }
+          return { error: 'more b\'s than available a\'s' };
+        }
+        if (symbol === 'a') {
+          return { error: 'a\'s must come before b\'s' };
+        }
+      }
+
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack) {
+      return stack.length > 1 && stack[0] === 'Z';
+    }
+  },
+
+  aibjck: {
+    name: 'aⁱ bʲ cᵏ (i + j = k)',
+    subtitle: 'Pushdown Automaton for the language aⁱ bʲ cᵏ where i + j = k',
+    initialState: 'q0',
+    stackStart: 'Z',
+    allowsEmpty: false,
+    allowedSymbols: /^[abc]*$/,
+    examples: ['aabbcc', 'abcc', 'aaabbbccc', 'aabbbcccc'],
+    transitions: function(symbol, state, stackTop) {
+      if (state === 'q0') {
+        if (symbol === 'a') {
+          const rule = stackTop === 'Z' ? 'q0, a, Z) (q0, AZ)' : 'q0, a, A) (q0, AA)';
+          return { nextState: 'q0', operation: 'Push', pushValue: 'A', rule };
+        }
+        if (symbol === 'b') {
+          if (stackTop === 'A') {
+            return { nextState: 'q0', operation: 'Push', pushValue: 'B', rule: 'q0, b, A) (q0, BA)' };
+          }
+          if (stackTop === 'Z') {
+            return { nextState: 'q0', operation: 'Push', pushValue: 'B', rule: 'q0, b, Z) (q0, BZ)' };
+          }
+          return { error: 'invalid transition' };
+        }
+        if (symbol === 'c') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'q0, c, A) (q1, )' };
+          }
+          if (stackTop === 'B') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'q0, c, B) (q1, )' };
+          }
+          return { error: 'no a\'s or b\'s to match c\'s' };
+        }
+        return { error: 'language requires a\'s or b\'s first' };
+      }
+      if (state === 'q1') {
+        if (symbol === 'c') {
+          if (stackTop === 'A') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'q1, c, A) (q1, )' };
+          }
+          if (stackTop === 'B') {
+            return { nextState: 'q1', operation: 'Pop', rule: 'q1, c, B) (q1, )' };
+          }
+          if (stackTop === 'Z') {
+            return { nextState: 'q2', operation: 'None', rule: 'q1, c, Z) (q2, Z)' };
+          }
+          return { error: 'stack underflow' };
+        }
+        if (symbol === 'a' || symbol === 'b') {
+          return { error: 'a\'s and b\'s must come before c\'s' };
+        }
+        return { error: 'only c\'s allowed in this section' };
+      }
+      if (state === 'q2') {
+        return { error: 'input should end after matching c\'s' };
+      }
+      return { error: `invalid transition for symbol "${symbol}" in state ${state}` };
+    },
+    acceptanceCondition: function(stack, state, index, inputLength) {
+      return (state === 'q2' || (state === 'q1' && index === inputLength)) && stack.length === 1 && stack[0] === 'Z';
+    }
   }
 };
 
-// ── Helpers ───────────────────────────────────────────
+// ... (rest of the code remains the same)
 
 function updateChips() {
   const container = document.getElementById('chipsContainer');
   const config = pdaConfigs[currentLanguage];
   container.innerHTML = '<span class="label">Try:</span>';
-  
+
   config.examples.forEach(ex => {
     const btn = document.createElement('button');
     btn.className = 'chip';
@@ -199,10 +532,9 @@ function setTransition(sym, top, op, next, rule) {
   const opEl = document.getElementById('iOp');
   opEl.textContent = op || '—';
   opEl.className = 'mono op-badge';
-  
-  // Remove and re-add pulse animation to trigger it
+
   opEl.classList.remove('active-pulse');
-  void opEl.offsetWidth; // Trigger reflow
+  void opEl.offsetWidth;
 
   if (op === 'Push') {
     opEl.classList.add('push', 'active-pulse');
@@ -217,8 +549,8 @@ function renderStack(animateTop, animType, poppedValue) {
   const el = document.getElementById('stack');
   el.innerHTML = '';
 
-  // Render current stack from top to bottom
-  // Top of stack (last element) should be at the top of the container
+  const displaySymbol = (sym) => (sym === 'Z' ? 'Z₀' : sym);
+
   for (let i = stack.length - 1; i >= 0; i--) {
     const slot = document.createElement('div');
     slot.className = 'stack-slot';
@@ -230,16 +562,14 @@ function renderStack(animateTop, animType, poppedValue) {
       slot.classList.add('anim-push');
     }
 
-    slot.textContent = stack[i];
+    slot.textContent = displaySymbol(stack[i]);
     el.appendChild(slot);
   }
 
-  // Handle Pop animation: show the element that was just removed
   if (animateTop && animType === 'pop' && poppedValue !== undefined) {
     const slot = document.createElement('div');
     slot.className = 'stack-slot top-slot anim-pop';
-    slot.textContent = poppedValue;
-    // Insert at the very top of the list so it animates out from the top
+    slot.textContent = displaySymbol(poppedValue);
     el.insertBefore(slot, el.firstChild);
   }
 }
@@ -253,7 +583,7 @@ function renderTape() {
   for (let i = 0; i < inputStr.length; i++) {
     const cell = document.createElement('div');
     cell.className = 'tape-cell';
-    if (i < idx)  cell.classList.add('done');
+    if (i < idx) cell.classList.add('done');
     if (i === idx) cell.classList.add('active');
     cell.textContent = inputStr[i];
     el.appendChild(cell);
@@ -264,7 +594,7 @@ function renderTape() {
 
 function checkAcceptance() {
   const config = pdaConfigs[currentLanguage];
-  if (config.acceptanceCondition(stack, state, idx, inputStr.length)) {
+  if (config.acceptanceCondition(stack, state, idx, inputStr.length, inputStr)) {
     accept();
   } else {
     reject('stack not empty or final state not reached');
@@ -297,19 +627,11 @@ function startSimulation() {
   const config = pdaConfigs[currentLanguage];
   inputStr = document.getElementById('inputString').value.trim();
 
-  if (!inputStr && currentLanguage !== 'anbn' && currentLanguage !== 'anb2n') {
-    // Some languages like anbn might allow empty string if n=0
-    // but usually we want at least some input to visualize
-  }
-  
-  if (inputStr === "" && (currentLanguage === 'anbn' || currentLanguage === 'anb2n' || currentLanguage === 'parentheses' || currentLanguage === 'palindrome')) {
-    // allow empty string for these
-  } else if (!inputStr) {
+  if (!inputStr && !config.allowsEmpty) {
     setStatus('Please enter a string first', '');
     return;
   }
 
-  // Validate symbols
   if (!config.allowedSymbols.test(inputStr)) {
     setStatus(`Invalid input — only ${config.allowedSymbols.toString().slice(2, -2)} are allowed`, 'rejected');
     return;
@@ -335,7 +657,6 @@ function nextStep() {
 
   const config = pdaConfigs[currentLanguage];
 
-  // All input consumed — check acceptance
   if (idx >= inputStr.length) {
     checkAcceptance();
     return;
@@ -343,7 +664,6 @@ function nextStep() {
 
   const sym = inputStr[idx];
   const top = stack[stack.length - 1];
-
   const result = config.transitions(sym, state, top, idx, inputStr.length);
 
   if (result.error) {
@@ -351,7 +671,6 @@ function nextStep() {
     return;
   }
 
-  // Handle operations
   if (result.operation === 'Push') {
     if (Array.isArray(result.pushValue)) {
       result.pushValue.forEach(v => stack.push(v));
@@ -373,7 +692,6 @@ function nextStep() {
   idx++;
   renderTape();
 
-  // After advancing, check if input is now exhausted
   if (idx >= inputStr.length) {
     setTimeout(checkAcceptance, 320);
   }
@@ -393,8 +711,8 @@ function reset() {
   done     = false;
 
   document.getElementById('inputString').value = '';
-  document.getElementById('stack').innerHTML   = '';
-  document.getElementById('tape').innerHTML    = '';
+  document.getElementById('stack').innerHTML = '';
+  document.getElementById('tape').innerHTML = '';
   document.getElementById('tape-section').style.display = 'none';
 
   setState(config.initialState);
